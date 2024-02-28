@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import express from "express";
+import cors from "cors";
 
 dotenv.config();
 
@@ -24,22 +25,53 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de la connexion à la base de données");
   } finally {
     // Ensures that the client will close when you finish/error
     await client.close();
   }
 }
 run().catch(console.dir);
+// MONGO ends
 
+// Express
 const app = express();
 const port = 4000;
 
 // routes
-app.get("/", (_, res) => {
-  res.send("Hello world !");
+app.use(cors());
+app.use(express.json());
+
+app.get("/login", async (req, res) => {
+  try {
+    await client.connect();
+    const db = client.db("mytodolist");
+    const collection = db.collection("users");
+    const documents = await collection.find({}).toArray();
+    res.status(200).json(documents);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de la connexion à la base de données");
+  } finally {
+    await client.close();
+  }
+});
+
+app.post("/signup", async (req, res) => {
+  try {
+    await client.connect();
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de la connexion à la base de données");
+  } finally {
+    client.close();
+  }
 });
 
 // starts app
+
 app.listen(port, () => {
   console.log("app started successfully !");
 });
