@@ -46,11 +46,20 @@ app.use(express.json());
 
 app.get("/login", async (req, res) => {
   try {
+    const userRequest = req.body;
     await client.connect();
     const db = client.db("mytodolist");
-    const collection = db.collection("users");
-    const documents = await collection.find({}).toArray();
-    res.status(200).json(documents);
+    const usersCollection = db.collection("users");
+    const user = await usersCollection.findOne(userRequest);
+    if (!user) {
+      res
+        .status(401)
+        .send("Les informations fournie ne permettent pas de vous identifier");
+    } else {
+      res.status(200).send(
+        `Bienvenue ${user.pseudo} ! Vous êtes maintenant connecté.`
+      );
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
@@ -59,19 +68,18 @@ app.get("/login", async (req, res) => {
   }
 });
 
-app.post("/signup", async (req, res) => {
-  try {
-    await client.connect();
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur lors de la connexion à la base de données");
-  } finally {
-    client.close();
-  }
-});
+// app.post("/signup", async (req, res) => {
+//   try {
+//     await client.connect();
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Erreur lors de la connexion à la base de données");
+//   } finally {
+//     client.close();
+//   }
+// });
 
 // starts app
-
 app.listen(port, () => {
   console.log("app started successfully !");
 });
