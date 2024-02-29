@@ -64,7 +64,7 @@ run()["catch"](console.dir);
 
 // Express
 var app = (0, _express["default"])();
-var port = 4000;
+var port = process.env.PORT || 4000;
 
 // Middlewares
 app.use((0, _cors["default"])());
