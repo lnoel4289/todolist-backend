@@ -40,10 +40,11 @@ run().catch(console.dir);
 const app = express();
 const port = 4000;
 
-// routes
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.get("/login", async (req, res) => {
   try {
     const userRequest = req.body;
