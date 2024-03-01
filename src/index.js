@@ -92,11 +92,7 @@ app.post("/signup", async (req, res) => {
         .send("Ce pseudo est déjà utilisé ! Merci de le modifier.");
     } else {
       const insertedNewUser = await usersCollection.insertOne(newUser);
-      if (
-        !insertedNewUser ||
-        insertedNewUser === undefined ||
-        insertedNewUser === null
-      ) {
+      if (!insertedNewUser) {
         res.status(500).send("La requête à échoué ! Veuillez réessayer");
       } else {
         res
