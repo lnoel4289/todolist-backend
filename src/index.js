@@ -79,9 +79,10 @@ app.post("/signup", async (req, res) => {
       {
         pseudo: newUser.pseudo,
       },
+      // projection aims return only "pseudo" field and _id
       { projection: { pseudo: 1 } }
     );
-    console.log(pseudoExists);
+
     if (!pseudoExists || pseudoExists === undefined || pseudoExists === null) {
       const insertedNewUser = await users.insertOne(newUser);
       if (
