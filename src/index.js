@@ -88,6 +88,10 @@ app.post("/signup", async (req, res) => {
         .status(403)
         .send("Ce pseudo est déjà enregistré ! Veuillez en utiliser un autre.");
     } else {
+
+      // const newPassword = userSignup.password;
+      // if(password){}else{};
+
       const successfulSignup = await usersCollection.insertOne(userSignup);
       if (!successfulSignup.acknowledged) {
         res.status(500).send("La requête à échoué ! Veuillez réessayer");
