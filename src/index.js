@@ -75,10 +75,7 @@ app.post("/signup", async (req, res) => {
     await client.connect();
     const db = client.db("mytodolist");
     const users = db.collection("users");
-    const pseudoExists = await users.findOne(
-      { pseudo: newUser.pseudo },
-      { pseudo: 1 }
-    );
+    const pseudoExists = await users.findOne({ pseudo: newUser.pseudo });
     if (!pseudoExists || pseudoExists === undefined || pseudoExists === null) {
       const insertedNewUser = await users.insertOne(newUser);
       if (
