@@ -14,10 +14,24 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+// Connexion to Mongo database
+async function runDb() {
+  try {
+    await client.connect();
+    console.log("connexion à la base de données réussie !");
+  } catch (err) {
+    console.log(err);
+  }
+}
+runDb();
 
 // Express
 const app = express();
 const port = process.env.PORT || 4000;
+
+// DB vars
+const mytodolistDb = client.db("mytodolist");
+const usersCollection = mytodolistDb.collection("users");
 
 // Middlewares
 app.use(cors());
@@ -25,10 +39,8 @@ app.use(express.json());
 
 // Routes
 // Default welcome message ("/")
-app.get("/", async (req, res) => {
+app.get("/", async (_, res) => {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     res
@@ -46,15 +58,12 @@ app.get("/", async (req, res) => {
 // User login
 app.get("/login", async (req, res) => {
   try {
-    const userRequest = req.body;
-    await client.connect();
-    const db = client.db("mytodolist");
-    const users = db.collection("users");
-    const user = await users.findOne(userRequest);
+    const userLogin = req.body;
+    const user = await usersCollection.findOne(userLogin);
     if (!user) {
       res
         .status(401)
-        .send("Les informations fournie ne permettent pas de vous identifier");
+        .send("Les informations fournies ne permettent pas de vous identifier");
     } else {
       res
         .status(200)
@@ -63,8 +72,6 @@ app.get("/login", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
-  } finally {
-    await client.close();
   }
 });
 
@@ -72,19 +79,19 @@ app.get("/login", async (req, res) => {
 app.post("/signup", async (req, res) => {
   try {
     const newUser = req.body;
-    await client.connect();
-    const db = client.db("mytodolist");
-    const users = db.collection("users");
-    const pseudoExists = await users.findOne(
+    const pseudoExists = await usersCollection.findOne(
       {
         pseudo: newUser.pseudo,
       },
-      // projection aims return only "pseudo" field and _id
+      // projection aims return only "pseudo" field (also _id by default)
       { projection: { pseudo: 1 } }
     );
-
-    if (!pseudoExists || pseudoExists === undefined || pseudoExists === null) {
-      const insertedNewUser = await users.insertOne(newUser);
+    if (pseudoExists) {
+      res
+        .status(403)
+        .send("Ce pseudo est déjà utilisé ! Merci de le modifier.");
+    } else {
+      const insertedNewUser = await usersCollection.insertOne(newUser);
       if (
         !insertedNewUser ||
         insertedNewUser === undefined ||
@@ -96,16 +103,10 @@ app.post("/signup", async (req, res) => {
           .status(201)
           .send(`L'utilisateur ${newUser.pseudo} a bien été enregistré !`);
       }
-    } else {
-      res
-        .status(403)
-        .send("Ce pseudo est déjà utilisé ! Merci de le modifier.");
     }
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
-  } finally {
-    client.close();
   }
 });
 
