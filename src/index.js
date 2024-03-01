@@ -49,9 +49,6 @@ app.get("/", async (_, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
   }
 });
 
@@ -78,10 +75,10 @@ app.get("/login", async (req, res) => {
 // User signup
 app.post("/signup", async (req, res) => {
   try {
-    const newUser = req.body;
+    const userSignup = req.body;
     const pseudoExists = await usersCollection.findOne(
       {
-        pseudo: newUser.pseudo,
+        pseudo: userSignup.pseudo,
       },
       // projection aims return only "pseudo" field (also _id by default)
       { projection: { pseudo: 1 } }
@@ -89,15 +86,15 @@ app.post("/signup", async (req, res) => {
     if (pseudoExists) {
       res
         .status(403)
-        .send("Ce pseudo est déjà utilisé ! Merci de le modifier.");
+        .send("Ce pseudo est déjà enregistré ! Veuillez en utiliser un autre.");
     } else {
-      const insertedNewUser = await usersCollection.insertOne(newUser);
-      if (!insertedNewUser) {
+      const successfulSignup = await usersCollection.insertOne(userSignup);
+      if (!successfulSignup.acknowledged) {
         res.status(500).send("La requête à échoué ! Veuillez réessayer");
       } else {
         res
           .status(201)
-          .send(`L'utilisateur ${newUser.pseudo} a bien été enregistré !`);
+          .send(`L'utilisateur ${userSignup.pseudo} a bien été enregistré !`);
       }
     }
   } catch (err) {
