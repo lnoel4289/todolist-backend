@@ -34,7 +34,7 @@ const mytodolistDb = client.db("mytodolist");
 const usersCollection = mytodolistDb.collection("users");
 
 // Middlewares
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 
 // Routes
