@@ -130,17 +130,24 @@ app.post("/signup", async (req, res) => {
 // User login
 app.get("/login", async (req, res) => {
   try {
-    const userLogin = req.body;
-    const user = await usersCollection.findOne(userLogin);
+    const user = await usersCollection.findOne({ pseudo: req.body.pseudo });
     if (!user) {
-      res
+      return res
         .status(401)
         .send("Les informations fournies ne permettent pas de vous identifier");
-    } else {
+    }
+    bcrypt.compare(req.body.password, user.password).then((valid) => {
+      if (!valid) {
+        return res
+          .status(401)
+          .send(
+            "Les informations fournies ne permettent pas de vous identifier"
+          );
+      }
       res
         .status(200)
         .send(`Bienvenue ${user.pseudo} ! Vous êtes maintenant connecté.`);
-    }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
