@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import express from "express";
 import cors from "cors";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ const mytodolistDb = client.db("mytodolist");
 const usersCollection = mytodolistDb.collection("users");
 
 // Middlewares
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
 
 // Routes
@@ -56,19 +57,19 @@ app.get("/", async (_, res) => {
 app.post("/signup", async (req, res) => {
   const userSignup = req.body;
   // regex matching forbidden characters
-  const forbiddenChars = /[<>&"'\/\\]/;
+  const pseudoRegex = /^[^<>&"'\\/]{1,50}$/;
   // Function testing if entry contains any forbidden characters
-  function notAllowed(entry) {
-    return forbiddenChars.test(entry);
+  function pseudoAllowed(entry) {
+    return pseudoRegex.test(entry);
   }
 
   try {
     // If pseudo contains any forbidden character
-    if (notAllowed(userSignup.pseudo)) {
+    if (!pseudoAllowed(userSignup.pseudo)) {
       res
         .status(400)
         .send(
-          `Erreur: Les caractères suivants sont interdits lors de la création du pseudo: <>&"'\\/`
+          `Erreur:\nLes caractères suivants sont interdits lors de la création du pseudo: <>&"'\\/\nLe pseudo ne doit pas excéder 50 caractères.`
         );
     } else {
       // If created pseudo already exists
@@ -90,25 +91,33 @@ app.post("/signup", async (req, res) => {
 
         // If password doesn't match allowed pattern
         const passwordRegex =
-          /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+])[^\s]{8,}$/;
+          /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+])(?!.*\s).{8,100}$/;
         const passwordAllowed = passwordRegex.test(userSignup.password);
         if (!passwordAllowed) {
           res
             .status(400)
             .send(
-              "Erreur: le mot de passe doit correspondre aux critères suivants:\n - longueur min: 8 chars \n- au moins une majuscule\n- au mois une minuscule\n- au moins un chiffre\n- au moins un caractère spécial\n- ne comporte pas d'espace"
+              "Erreur: le mot de passe doit correspondre aux critères suivants:\n - 8 caractères minimum \n- au moins une majuscule\n- au mois une minuscule\n- au moins un chiffre\n- au moins un caractère spécial\n- ne comporte pas d'espace"
             );
         } else {
-          const successfulSignup = await usersCollection.insertOne(userSignup);
-          if (!successfulSignup.acknowledged) {
-            res.status(500).send("La requête à échoué ! Veuillez réessayer");
-          } else {
-            res
-              .status(201)
-              .send(
-                `L'utilisateur ${userSignup.pseudo} a bien été enregistré ! Vous pouvez maintenant vous connecter`
-              );
-          }
+          bcrypt
+            .hash(userSignup.password, 10)
+            .then((hash) => {
+              usersCollection.insertOne({
+                pseudo: userSignup.pseudo,
+                password: hash,
+              });
+            })
+            .then(
+              res
+                .status(201)
+                .send(
+                  `L'utilisateur ${userSignup.pseudo} a bien été enregistré ! Vous pouvez maintenant vous connecter`
+                )
+            )
+            .catch(() => {
+              res.status(500).send("La requête à échoué ! Veuillez réessayer");
+            });
         }
       }
     }
