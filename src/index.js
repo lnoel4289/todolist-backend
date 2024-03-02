@@ -38,7 +38,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-// Default welcome message ("/")
+// Default welcome endpoint ("/")
 app.get("/", async (_, res) => {
   try {
     // Send a ping to confirm a successful connection
@@ -46,6 +46,72 @@ app.get("/", async (_, res) => {
     res
       .status(200)
       .send("Pinged your deployment. You successfully connected to MongoDB!");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de la connexion à la base de données");
+  }
+});
+
+// User signup
+app.post("/signup", async (req, res) => {
+  const userSignup = req.body;
+  // regex matching forbidden characters
+  const forbiddenChars = /[<>&"'\/\\]/;
+  // Function testing if entry contains any forbidden characters
+  function notAllowed(entry) {
+    return forbiddenChars.test(entry);
+  }
+
+  try {
+    // If pseudo contains any forbidden character
+    if (notAllowed(userSignup.pseudo)) {
+      res
+        .status(400)
+        .send(
+          `Erreur: Les caractères suivants sont interdits lors de la création du pseudo: <>&"'\\/`
+        );
+    } else {
+      // If created pseudo already exists
+      const pseudoExists = await usersCollection.findOne(
+        {
+          pseudo: userSignup.pseudo,
+        },
+        // projection aims return only "pseudo" field (with also _id, by default)
+        { projection: { pseudo: 1 } }
+      );
+      if (pseudoExists) {
+        res
+          .status(403)
+          .send(
+            "Ce pseudo est déjà enregistré ! Veuillez en utiliser un autre."
+          );
+      } else {
+        // If password contains any forbidden character
+
+        // If password doesn't match allowed pattern
+        const passwordRegex =
+          /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+])[^\s]{8,}$/;
+        const passwordAllowed = passwordRegex.test(userSignup.password);
+        if (!passwordAllowed) {
+          res
+            .status(400)
+            .send(
+              "Erreur: le mot de passe doit correspondre aux critères suivants:\n - longueur min: 8 chars \n- au moins une majuscule\n- au mois une minuscule\n- au moins un chiffre\n- au moins un caractère spécial\n- ne comporte pas d'espace"
+            );
+        } else {
+          const successfulSignup = await usersCollection.insertOne(userSignup);
+          if (!successfulSignup.acknowledged) {
+            res.status(500).send("La requête à échoué ! Veuillez réessayer");
+          } else {
+            res
+              .status(201)
+              .send(
+                `L'utilisateur ${userSignup.pseudo} a bien été enregistré ! Vous pouvez maintenant vous connecter`
+              );
+          }
+        }
+      }
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send("Erreur lors de la connexion à la base de données");
@@ -65,41 +131,6 @@ app.get("/login", async (req, res) => {
       res
         .status(200)
         .send(`Bienvenue ${user.pseudo} ! Vous êtes maintenant connecté.`);
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur lors de la connexion à la base de données");
-  }
-});
-
-// User signup
-app.post("/signup", async (req, res) => {
-  try {
-    const userSignup = req.body;
-    const pseudoExists = await usersCollection.findOne(
-      {
-        pseudo: userSignup.pseudo,
-      },
-      // projection aims return only "pseudo" field (also _id by default)
-      { projection: { pseudo: 1 } }
-    );
-    if (pseudoExists) {
-      res
-        .status(403)
-        .send("Ce pseudo est déjà enregistré ! Veuillez en utiliser un autre.");
-    } else {
-
-      // const newPassword = userSignup.password;
-      // if(password){}else{};
-
-      const successfulSignup = await usersCollection.insertOne(userSignup);
-      if (!successfulSignup.acknowledged) {
-        res.status(500).send("La requête à échoué ! Veuillez réessayer");
-      } else {
-        res
-          .status(201)
-          .send(`L'utilisateur ${userSignup.pseudo} a bien été enregistré !`);
-      }
     }
   } catch (err) {
     console.error(err);
